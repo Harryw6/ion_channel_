@@ -37,10 +37,10 @@ include:
 # GitHub Pages settings
 github:
   repository_name: ion_channel
-  repository_url: https://github.com/username/ion_channel
+  repository_url: https://github.com/Harryw6/ion_channel
 
 # SEO settings
 title: Ion Channel Data Viewer
-author: Your Name
+author: WXH
 lang: zh-CN
 locale: zh_CN
