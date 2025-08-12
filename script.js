@@ -7,57 +7,67 @@ class IonChannelViewer {
         this.init();
     }
 
-    async init() {
-        await this.loadData();
-        await this.loadPDBFiles();
-        this.setupEventListeners();
-        this.renderTable();
-        this.populateFilters();
-    }
-
-    async loadData() {
-        try {
-            const response = await fetch('mpnn_results.csv');
-            const csvText = await response.text();
-            
-            Papa.parse(csvText, {
-                header: true,
-                complete: (results) => {
-                    this.data = results.data.filter(row => row.Channel && row.Channel.trim() !== '');
-                },
-                error: (error) => {
-                    console.error('CSV解析错误:', error);
-                }
+    // 简单的CSV解析函数
+    parseCSV(csvText) {
+        const lines = csvText.trim().split('\n');
+        const headers = lines[0].split(',');
+        const result = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            const row = {};
+            headers.forEach((header, index) => {
+                row[header] = values[index] || '';
             });
-        } catch (error) {
-            console.error('加载CSV文件错误:', error);
+            result.push(row);
         }
+        
+        return result;
     }
 
-    async loadPDBFiles() {
-        try {
-            const response = await fetch('all_pdb/');
-            if (!response.ok) {
-                throw new Error('无法加载PDB文件列表');
-            }
-            
-            const html = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const links = doc.querySelectorAll('a[href$=".pdb"]');
-            
-            this.pdbFiles = Array.from(links).map(link => link.getAttribute('href'));
-            this.populatePDBSelect();
-        } catch (error) {
-            console.log('使用本地PDB文件列表');
-            this.pdbFiles = [
-                'design0_n0.pdb', 'design0_n1.pdb', 'design1_n0.pdb', 'design1_n1.pdb',
-                'design2_n0.pdb', 'design2_n1.pdb', 'design3_n0.pdb', 'design3_n1.pdb',
-                'design4_n0.pdb', 'design4_n1.pdb', 'design5_n0.pdb', 'design5_n1.pdb',
-                'design6_n0.pdb', 'design6_n1.pdb', 'design7_n0.pdb', 'design7_n1.pdb'
-            ];
-            this.populatePDBSelect();
-        }
+    init() {
+        this.loadData();
+        this.loadPDBFiles();
+        this.setupEventListeners();
+        // 延迟渲染表格，确保数据加载完成
+        setTimeout(() => {
+            this.renderTable();
+        }, 100);
+    }
+
+    loadData() {
+        // 直接嵌入CSV数据
+        const csvData = `Channel,design,n,mpnn,plddt,i_ptm,i_pae,rmsd,seq
+Nav1.2,0,0,1.670964132,0.264105022,0.10404928,25.90797788,28.1592617,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/LLIVKLLAEK
+Nav1.2,0,1,1.716530679,0.305697739,0.180560946,23.28447151,31.25585365,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/LLEVLKLAKK
+Nav1.2,1,0,1.619780026,0.279690266,0.135494381,25.08698273,24.42000198,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/LLLFLLVKKL
+Nav1.2,1,1,1.61258087,0.279690266,0.135494381,25.08698273,24.42000198,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/LLLFLLVKKL
+Nav1.2,2,0,1.311588447,0.220756114,0.121419363,24.86878633,26.43888092,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/DYYLPVLALI
+Nav1.2,2,1,1.35445842,0.568643898,0.531189084,14.48365211,5.720145226,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/DYYLPEILKI
+BK,3,0,1.526939876,0.292473793,0.115163632,25.07905775,26.69474792,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/LLFEILKLLG
+BK,3,1,1.574088685,0.312396586,0.111420222,25.31439567,33.38283157,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/SLWELLKKLG
+BK,4,0,1.466576026,0.302256465,0.13748911,25.06625843,29.09628677,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/LVILLILILM
+BK,4,1,1.487688349,0.30949384,0.21154502,21.88833278,18.87038803,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/LVVFLILLLM
+BK,5,0,1.392094557,0.284580708,0.157770783,24.48585063,3.397523403,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/SLALEIVEKE
+KCNQ,5,1,1.45593213,0.247543395,0.126129374,24.66247094,8.533480644,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/ALALELVAKE
+KCNQ,6,0,1.645189093,0.304338515,0.150696963,24.34013015,29.90740204,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/LISKLILKLL
+KCNQ,6,1,1.605413864,0.309301257,0.149298012,24.26525956,22.95729637,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/LLFLIILKLL
+KCNQ,7,0,1.560803638,0.31350708,0.168339461,23.56371921,30.58870125,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/YSLYMIIKEL
+KCNQ,7,1,1.33681414,0.553117067,0.479515672,16.27376497,32.23592377,ALIQSVKKLSDVMILTVFCLSFLGSFYLINLILAVVAMAYEEQNQATMTEEQKKYYNAMKKLGSKKPQKPIPRPANFTIGWNIFDFVVVILSIVGMFLAELIEKYFVSPTLFRVIRLARIGRILRLIKGAKGIRTLLFALMMSLPALFNIGLLLFLVMFIYAIFGMSIIISFLVVVNMYIAVILENFSVATEE/KSLYEIIKEL`;
+        
+        this.data = this.parseCSV(csvData).filter(row => row.Channel && row.Channel.trim() !== '');
+        console.log('加载的数据:', this.data); // 调试信息
+    }
+
+    loadPDBFiles() {
+        // 直接嵌入PDB文件列表
+        this.pdbFiles = [
+            'design0_n0.pdb', 'design0_n1.pdb', 'design1_n0.pdb', 'design1_n1.pdb',
+            'design2_n0.pdb', 'design2_n1.pdb', 'design3_n0.pdb', 'design3_n1.pdb',
+            'design4_n0.pdb', 'design4_n1.pdb', 'design5_n0.pdb', 'design5_n1.pdb',
+            'design6_n0.pdb', 'design6_n1.pdb', 'design7_n0.pdb', 'design7_n1.pdb'
+        ];
+        this.populatePDBSelect();
     }
 
     populatePDBSelect() {
@@ -73,14 +83,6 @@ class IonChannelViewer {
     }
 
     setupEventListeners() {
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            this.filterTable(e.target.value);
-        });
-
-        document.getElementById('channelFilter').addEventListener('change', (e) => {
-            this.filterByChannel(e.target.value);
-        });
-
         document.getElementById('pdbSelect').addEventListener('change', (e) => {
             if (e.target.value) {
                 this.loadPDB(e.target.value);
@@ -139,61 +141,34 @@ class IonChannelViewer {
         }
     }
 
-    populateFilters() {
-        const channels = [...new Set(this.data.map(row => row.Channel))];
-        const select = document.getElementById('channelFilter');
+    
+    loadPDB(filename) {
+        // 加载实际的PDB文件
+        const filePath = `all_pdb/${filename}`;
         
-        channels.forEach(channel => {
-            const option = document.createElement('option');
-            option.value = channel;
-            option.textContent = channel;
-            select.appendChild(option);
-        });
-    }
-
-    filterTable(searchTerm) {
-        const rows = document.querySelectorAll('#tableBody tr');
-        const term = searchTerm.toLowerCase();
-        
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(term) ? '' : 'none';
-        });
-    }
-
-    filterByChannel(channel) {
-        const rows = document.querySelectorAll('#tableBody tr');
-        
-        rows.forEach(row => {
-            const channelCell = row.cells[0].textContent;
-            row.style.display = !channel || channelCell === channel ? '' : 'none';
-        });
-    }
-
-    async loadPDB(filename) {
-        try {
-            const response = await fetch(`all_pdb/${filename}`);
-            if (!response.ok) {
-                throw new Error('无法加载PDB文件');
-            }
-            
-            const pdbText = await response.text();
-            this.displayPDB(pdbText, filename);
-            
-            document.getElementById('pdbSelect').value = filename;
-            
-            const rowData = this.data.find(row => 
-                `design${row.design}_n${row.n}.pdb` === filename
-            );
-            
-            if (rowData) {
-                this.displayPDBInfo(rowData, filename);
-            }
-            
-        } catch (error) {
-            console.error('加载PDB文件错误:', error);
-            document.getElementById('pdbInfo').innerHTML = `<p style="color: red;">错误: ${error.message}</p>`;
-        }
+        fetch(filePath)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to load PDB file: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(pdbText => {
+                this.displayPDB(pdbText, filename);
+                document.getElementById('pdbSelect').value = filename;
+                
+                const rowData = this.data.find(row => 
+                    `design${row.design}_n${row.n}.pdb` === filename
+                );
+                
+                if (rowData) {
+                    this.displayPDBInfo(rowData, filename);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading PDB file:', error);
+                alert(`无法加载PDB文件: ${filename}\n请确保文件存在于all_pdb目录中`);
+            });
     }
 
     displayPDB(pdbText, filename) {
