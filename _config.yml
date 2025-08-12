@@ -1,0 +1,44 @@
+name: Ion Channel Data Viewer
+description: A web-based viewer for ion channel data and PDB structures
+url: https://username.github.io/ion_channel
+baseurl: /ion_channel
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .bundle
+  - .sass-cache
+  - .jekyll-cache
+  - .jekyll-metadata
+  - script.js
+  - styles.css
+
+# Include files
+include:
+  - _config.yml
+  - index.html
+  - mpnn_results.csv
+  - all_pdb
+
+# GitHub Pages settings
+github:
+  repository_name: ion_channel
+  repository_url: https://github.com/username/ion_channel
+
+# SEO settings
+title: Ion Channel Data Viewer
+author: Your Name
+lang: zh-CN
+locale: zh_CN
